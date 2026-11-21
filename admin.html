@@ -187,7 +187,6 @@ small{color:#81858b;font-weight:400}
 <label>نام</label><input id="cnm">
 <label>نام کاربری</label><input id="cu" dir="ltr" autocomplete="off">
 <label>شماره همراه</label><input id="cph" dir="ltr" inputmode="numeric" autocomplete="off">
-
 <label>آدرس <small>(خالی = تحویل حضوری)</small></label><textarea id="cad" rows="2"></textarea>
 <div style="display:flex;gap:8px;margin-top:14px"><button class="b p" id="csv" onclick="saveC()" style="flex:1">ذخیره</button><button class="b" onclick="closeC()">انصراف</button></div>
 </div>
@@ -216,6 +215,7 @@ var P=[],cur=null,keep=[],PW='',ct=1;
 var S={name:'الماس',address:'بازار بزرگ تهران بازار مسگرها کوچه خسروی پاساژ نیک پ1',phone:'علیرضا: 09331805391|پخش: 02155617531',hours:'9:00 الی 17:00',pay:'شماره کارت: 0000-0000-0000-0000|به نام: نام صاحب حساب'};
 function $(i){return document.getElementById(i)}
 function fa(x){return Math.round(x).toLocaleString('fa-IR')}
+// escape کامل: شامل کوتیشن‌ها، تا داخل attribute هم امن باشد
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function bdi(t){return '<bdi dir="ltr">'+esc(String(t).trim())+'</bdi>'}
 function msg(t,c){var m=$('msg');m.className=c||'';m.textContent=t||''}
@@ -424,11 +424,20 @@ function drawC(){
  var l=CU.filter(function(c){return !q||nd(c.name+' '+c.user+' '+c.phone).toLowerCase().indexOf(q)>-1});
  $('cl2').innerHTML=(l.length?'<div class="meta" style="margin-bottom:8px;color:#81858b;font-size:13px">تعداد مشتریان: '+fa(CU.length)+'</div>':'')+
  (l.length?l.map(function(c){
-  
+  return '<div class="od"><div class="h"><div><div class="nm">'+esc(c.name||'—')+'</div><div class="ph"><a href="tel:'+esc(c.phone)+'">'+esc(c.phone)+'</a></div></div><div class="ac"><button class="b" onclick="openC('+c.id+')">ویرایش</button><button class="b p" onclick="custOrders('+c.id+')">🧾 سفارش‌ها</button><button class="b d" data-i="'+esc(c.id)+'" onclick="resetPw(this.dataset.i)">🔑 ریست رمز</button></div></div>'+
   '<div class="meta">🕒 ثبت‌نام: '+dt(c.date)+'</div>'+
   '<div class="pwr">👤 نام کاربری: <b>'+esc(c.user)+'</b></div>'+
-  
   '<div class="ad">📍 '+esc(c.addr||'تحویل حضوری')+'</div></div>'}).join(''):'<div class="c">مشتری‌ای پیدا نشد.</div>');
+}
+// ریست رمز: رمز تصادفی ساخته می‌شود و فقط همین یک بار نشان داده می‌شود
+function resetPw(id){
+ var c=CU.filter(function(x){return String(x.id)===String(id)})[0];if(!c)return;
+ if(!confirm('رمز «'+c.name+'» ریست شود؟ رمز فعلی دیگر کار نمی‌کند.'))return;
+ msg('در حال ریست رمز...','wt');
+ api('resetPassword',{id:c.id}).then(function(r){
+  msg('✓ رمز ریست شد.','ok');
+  prompt('رمز جدید «'+c.name+'» (همین حالا کپی کن و به مشتری بده، دوباره نشان داده نمی‌شود):',r.newPass);
+ }).catch(function(e){msg(e.message,'er')});
 }
 function openC(id){
  ced=CU.filter(function(c){return String(c.id)===String(id)})[0];if(!ced)return;
