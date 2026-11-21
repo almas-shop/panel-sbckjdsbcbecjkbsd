@@ -187,7 +187,7 @@ small{color:#81858b;font-weight:400}
 <label>نام</label><input id="cnm">
 <label>نام کاربری</label><input id="cu" dir="ltr" autocomplete="off">
 <label>شماره همراه</label><input id="cph" dir="ltr" inputmode="numeric" autocomplete="off">
-<label>رمز عبور</label><input id="cpw" dir="ltr" autocomplete="off">
+
 <label>آدرس <small>(خالی = تحویل حضوری)</small></label><textarea id="cad" rows="2"></textarea>
 <div style="display:flex;gap:8px;margin-top:14px"><button class="b p" id="csv" onclick="saveC()" style="flex:1">ذخیره</button><button class="b" onclick="closeC()">انصراف</button></div>
 </div>
@@ -216,7 +216,7 @@ var P=[],cur=null,keep=[],PW='',ct=1;
 var S={name:'الماس',address:'بازار بزرگ تهران بازار مسگرها کوچه خسروی پاساژ نیک پ1',phone:'علیرضا: 09331805391|پخش: 02155617531',hours:'9:00 الی 17:00',pay:'شماره کارت: 0000-0000-0000-0000|به نام: نام صاحب حساب'};
 function $(i){return document.getElementById(i)}
 function fa(x){return Math.round(x).toLocaleString('fa-IR')}
-function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function bdi(t){return '<bdi dir="ltr">'+esc(String(t).trim())+'</bdi>'}
 function msg(t,c){var m=$('msg');m.className=c||'';m.textContent=t||''}
 function nd(s){return String(s).replace(/[۰-۹]/g,function(c){return c.charCodeAt(0)-1776}).replace(/[٠-٩]/g,function(c){return c.charCodeAt(0)-1632})}
@@ -424,23 +424,23 @@ function drawC(){
  var l=CU.filter(function(c){return !q||nd(c.name+' '+c.user+' '+c.phone).toLowerCase().indexOf(q)>-1});
  $('cl2').innerHTML=(l.length?'<div class="meta" style="margin-bottom:8px;color:#81858b;font-size:13px">تعداد مشتریان: '+fa(CU.length)+'</div>':'')+
  (l.length?l.map(function(c){
-  return '<div class="od"><div class="h"><div><div class="nm">'+esc(c.name||'—')+'</div><div class="ph"><a href="tel:'+esc(c.phone)+'">'+esc(c.phone)+'</a></div></div><div class="ac"><button class="b" onclick="openC('+c.id+')">ویرایش</button><button class="b p" onclick="custOrders('+c.id+')">🧾 سفارش‌ها</button></div></div>'+
+  
   '<div class="meta">🕒 ثبت‌نام: '+dt(c.date)+'</div>'+
   '<div class="pwr">👤 نام کاربری: <b>'+esc(c.user)+'</b></div>'+
-  '<div class="pwr">🔑 رمز عبور: <b>'+esc(c.pass)+'</b></div>'+
+  
   '<div class="ad">📍 '+esc(c.addr||'تحویل حضوری')+'</div></div>'}).join(''):'<div class="c">مشتری‌ای پیدا نشد.</div>');
 }
 function openC(id){
  ced=CU.filter(function(c){return String(c.id)===String(id)})[0];if(!ced)return;
  $('cft').textContent='ویرایش مشتری: '+ced.name;
- $('cnm').value=ced.name;$('cu').value=ced.user;$('cph').value=ced.phone;$('cpw').value=ced.pass;$('cad').value=ced.addr;
+ $('cnm').value=ced.name;$('cu').value=ced.user;$('cph').value=ced.phone;$('cad').value=ced.addr;
  $('cf').style.display='block';window.scrollTo(0,0);msg('');
 }
 function closeC(){$('cf').style.display='none';ced=null}
 function saveC(){
  if(!ced)return;
  $('csv').disabled=true;msg('در حال ثبت...','wt');
- api('updateCustomer',{customer:{id:ced.id,name:$('cnm').value.trim(),username:$('cu').value.trim(),phone:$('cph').value.trim(),password:$('cpw').value,address:$('cad').value.trim()}}).then(function(r){
+ api('updateCustomer',{customer:{id:ced.id,name:$('cnm').value.trim(),username:$('cu').value.trim(),phone:$('cph').value.trim(),address:$('cad').value.trim()}}).then(function(r){
   CU=r.customers||CU;drawC();closeC();msg('✓ اطلاعات مشتری ذخیره شد.','ok');
  }).catch(function(e){msg(e.message,'er')}).then(function(){$('csv').disabled=false});
 }
