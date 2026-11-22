@@ -59,6 +59,12 @@ small{color:#81858b;font-weight:400}
 .pv div.m img{border-color:#2563eb}
 .pv i{position:absolute;top:-6px;inset-inline-start:-6px;width:22px;height:22px;background:#dc2626;color:#fff;border-radius:50%;text-align:center;font-style:normal;font-size:14px;line-height:22px;cursor:pointer}
 
+/* === تغییر یافته (الف) === */
+.it{flex-wrap:wrap}
+.it.off{opacity:.6}
+.r2{flex-basis:100%;display:flex;gap:8px}
+.r2 .b{flex:1;padding:6px 10px;font-size:13px}
+
 /* پیام */
 #msg{margin:10px 0;padding:11px;border-radius:16px;display:none;border:1px solid var(--bd);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
 #msg.ok{display:block;background:rgba(220,252,231,.85);color:#166534;animation:pop .45s var(--spring)}
@@ -167,6 +173,8 @@ small{color:#81858b;font-weight:400}
 <div><label>قیمت قبلی <small>(برای تخفیف)</small></label><input id="od" type="number" inputmode="numeric"></div>
 </div>
 <label>توضیحات</label><textarea id="ds" rows="3"></textarea>
+<!-- === تغییر یافته (ب) === -->
+<label style="display:flex;align-items:center;gap:8px;margin-top:12px"><input type="checkbox" id="av" style="width:auto" checked> فعال (نمایش در سایت)</label>
 <label>عکس‌ها <small>(روی عکس بزن تا عکس اصلی شود، با ✕ حذفش کن)</small></label>
 <div class="pv" id="pv"></div>
 <input id="im" type="file" accept="image/*" multiple style="margin-top:8px">
@@ -250,23 +258,46 @@ function logout(){
 try{var sp=localStorage.getItem('apw');if(sp){$('pw').value=sp;unlock(true)}}catch(e){}
 
 function imgs(p){return String(p.img||'').split(',').map(function(x){return x.trim()}).filter(function(x){return /^[\w.\-]+$/.test(x)})}
+
+// === تغییر یافته (ج) ===
 function load(){
- fetch(API_URL+'?action=products&t='+Date.now()).then(function(r){return r.json()}).then(function(r){
-  if(!r.ok)throw 0;P=r.products;
+ api('listProducts',{}).then(function(r){
+  P=r.products||[];
   var cs=[];P.forEach(function(p){if(cs.indexOf(p.cat)<0)cs.push(p.cat)});
   $('cl').innerHTML=cs.map(function(c){return '<option value="'+esc(c)+'">'}).join('');
   draw();
  }).catch(function(){$('ls').textContent='ارتباط با شیت برقرار نشد. صفحه را دوباره باز کن.'});
 }
+// === تغییر یافته (ج) ===
 function draw(){
  var q=$('q').value.trim(),l=P.filter(function(p){return !q||String(p.name).indexOf(q)>-1||String(p.cat).indexOf(q)>-1});
  $('ls').innerHTML=l.length?l.map(function(p){
-  var im=imgs(p)[0];
-  return '<div class="it"><div class="th">'+(im?'<img src="'+IMG_BASE+im+'" alt="">':'🛍')+'</div>'+
-  '<div class="in"><b>'+esc(p.name)+'</b><span>'+esc(p.cat)+' · '+fa(p.unit)+' تومان · پک '+fa(p.pack)+' تایی</span></div>'+
+  var im=imgs(p)[0],off=p.active===false;
+  return '<div class="it'+(off?' off':'')+'"><div class="th">'+(im?'<img src="'+IMG_BASE+im+'" alt="">':'🛍')+'</div>'+
+  '<div class="in"><b>'+esc(p.name)+'</b><span>'+esc(p.cat)+' · '+fa(p.unit)+' تومان · پک '+fa(p.pack)+' تایی'+(off?' · ⛔ غیرفعال (در سایت دیده نمی‌شود)':'')+'</span></div>'+
   '<div class="sq"><button onclick="qs('+p.sid+',-1)">−</button><b class="'+(p.stock<=0?'z':'')+'">'+fa(p.stock)+'</b><button onclick="qs('+p.sid+',1)">+</button></div>'+
-  '<div class="ac"><button class="b" onclick="openF('+p.sid+')">ویرایش</button><button class="b d" onclick="del('+p.sid+')">حذف</button></div></div>'}).join(''):'محصولی پیدا نشد.';
+  '<div class="ac"><button class="b" onclick="openF('+p.sid+')">ویرایش</button><button class="b d" onclick="del('+p.sid+')">حذف</button></div>'+
+  '<div class="r2"><button class="b" onclick="tg('+p.sid+')">'+(off?'👁 فعال کردن':'🚫 غیرفعال کردن')+'</button><button class="b" onclick="oos('+p.sid+')"'+(p.stock<=0?' disabled':'')+'>📭 اتمام موجودی</button></div></div>'}).join(''):'محصولی پیدا نشد.';
 }
+// === تغییر یافته (ج) ===
+// فعال / غیرفعال
+function tg(s){
+ var p=byId(s),n=p.active===false;
+ api('updateProduct',{product:{sid:s,active:n}}).then(function(r){
+  if(r.products)P=r.products;draw();
+  msg(n?'✓ محصول فعال شد و در سایت نمایش داده می‌شود.':'✓ محصول غیرفعال شد و از سایت مخفی شد.','ok');
+ }).catch(function(e){msg(e.message,'er')});
+}
+// === تغییر یافته (ج) ===
+// اتمام موجودی
+function oos(s){
+ var p=byId(s);if(!p||p.stock<=0)return;
+ if(!confirm('موجودی «'+p.name+'» صفر شود؟'))return;
+ api('updateProduct',{product:{sid:s,stock:0}}).then(function(r){
+  if(r.products)P=r.products;draw();msg('✓ موجودی صفر شد (ناموجود).','ok');
+ }).catch(function(e){msg(e.message,'er')});
+}
+
 function byId(s){return P.filter(function(p){return String(p.sid)===String(s)})[0]}
 function qs(s,d){
  var p=byId(s);if(p.stock+d<0)return;
@@ -279,8 +310,9 @@ function del(s){
 function openF(s){
  cur=s===null?null:byId(s);keep=cur?imgs(cur):[];
  $('ft').textContent=cur?'ویرایش: '+cur.name:'محصول جدید';
- $('cat').value=cur?cur.cat:'';$('nm').value=cur?cur.name:'';$('un').value=cur?cur.unit:'';$('pk').value=cur?cur.pack:'';
- $('st').value=cur?cur.stock:'';$('od').value=cur&&cur.old?cur.old:'';$('ds').value=cur?(cur.desc||''):'';$('im').value='';
+ $('cat').value=cur?cur.cat:'';$('nm').value=cur?cur.name:'';$('un').value=cur?cur.unit:'';$('pk').value=cur?cur.pack:'';$('st').value=cur?cur.stock:'';$('od').value=cur&&cur.old?cur.old:'';$('ds').value=cur?(cur.desc||''):'';$('im').value='';
+ // === تغییر یافته (د) ===
+ $('av').checked=cur?cur.active!==false:true;
  pv();$('fm').style.display='block';window.scrollTo(0,0);msg('');
 }
 function closeF(){$('fm').style.display='none'}
@@ -289,16 +321,49 @@ function pv(){
 }
 function mk(i){keep.unshift(keep.splice(i,1)[0]);pv()}
 function rm(i){keep.splice(i,1);pv()}
+
+// === تغییر یافته (۳) ===
 function shrink(f){
- return new Promise(function(ok,no){
-  var i=new Image();
-  i.onload=function(){var s=Math.min(1,900/i.width),c=document.createElement('canvas');c.width=Math.round(i.width*s);c.height=Math.round(i.height*s);c.getContext('2d').drawImage(i,0,0,c.width,c.height);ok(c.toDataURL('image/jpeg',0.85).split(',')[1])};
-  i.onerror=function(){no(new Error('فایل عکس خوانده نشد'))};i.src=URL.createObjectURL(f);
- });
+ var MAX=1000;
+ function out(src,w,h){
+  var s=Math.min(1,MAX/Math.max(w,h)),cw=Math.max(1,Math.round(w*s)),ch=Math.max(1,Math.round(h*s));
+  var c=document.createElement('canvas');c.width=cw;c.height=ch;
+  var x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,cw,ch);x.drawImage(src,0,0,cw,ch);
+  return new Promise(function(ok,no){
+   c.toBlob(function(b){
+    if(!b||b.size<1000)return no(new Error('تبدیل عکس انجام نشد. عکس دیگری امتحان کن.'));
+    var r=new FileReader();
+    r.onload=function(){ok(String(r.result).split(',')[1])};
+    r.onerror=function(){no(new Error('خواندن عکس انجام نشد.'))};
+    r.readAsDataURL(b);
+   },'image/jpeg',0.85);
+  });
+ }
+ function viaImg(){
+  return new Promise(function(ok,no){
+   var u=URL.createObjectURL(f),i=new Image();
+   i.onload=function(){out(i,i.naturalWidth,i.naturalHeight).then(ok,no);URL.revokeObjectURL(u)};
+   i.onerror=function(){URL.revokeObjectURL(u);no(new Error('فایل عکس خوانده نشد (فرمت پشتیبانی نمی‌شود).'))};
+   i.src=u;
+  });
+ }
+ if(window.createImageBitmap){
+  return createImageBitmap(f,{imageOrientation:'from-image'}).then(function(bm){
+   return out(bm,bm.width,bm.height).then(function(r){if(bm.close)bm.close();return r});
+  }).catch(viaImg);
+ }
+ return viaImg();
 }
+// === تغییر یافته (۳) ===
 function upload(name,b64,tk){
- return fetch('https://api.github.com/repos/'+REPO+'/contents/images/'+name,{method:'PUT',headers:{'Authorization':'Bearer '+tk,'Accept':'application/vnd.github+json'},body:JSON.stringify({message:'Add image '+name,content:b64})})
- .then(function(r){if(!r.ok)throw new Error('آپلود عکس انجام نشد. توکن گیت‌هاب را بررسی کن.')});
+ return fetch('https://api.github.com/repos/'+REPO+'/contents/images/'+name,{
+  method:'PUT',
+  headers:{'Authorization':'Bearer '+tk,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+  body:JSON.stringify({message:'Add image '+name,content:b64})
+ }).then(function(r){
+  if(r.ok)return;
+  throw new Error(r.status===401||r.status===403?'توکن گیت‌هاب نامعتبر است یا دسترسی نوشتن ندارد.':r.status===422?'این عکس قبلاً آپلود شده است. دوباره امتحان کن.':'آپلود عکس انجام نشد (کد '+r.status+').');
+ });
 }
 async function save(){
  var cat=$('cat').value.trim(),nm=$('nm').value.trim(),un=+$('un').value,pk=+$('pk').value,st=$('st').value===''?NaN:+$('st').value,files=$('im').files,tk=$('tk').value.trim();
@@ -309,7 +374,8 @@ async function save(){
   var all=keep.slice(),stamp=Date.now().toString(36);
   for(var k=0;k<files.length;k++){msg('آپلود عکس '+(k+1)+' از '+files.length+'...','wt');var n='p'+stamp+'-'+(k+1)+'.jpg';await upload(n,await shrink(files[k]),tk);all.push(n)}
   msg('در حال ثبت...','wt');
-  var p={cat:cat,name:nm,unit:un,pack:pk,stock:st,old:+$('od').value||0,desc:$('ds').value.trim(),img:all.join(',')};
+  // === تغییر یافته (هـ) ===
+  var p={cat:cat,name:nm,unit:un,pack:pk,stock:st,old:+$('od').value||0,desc:$('ds').value.trim(),img:all.join(','),active:$('av').checked};
   if(cur)p.sid=cur.sid;else p.bg=COLORS[Math.floor(Math.random()*COLORS.length)];
   await api(cur?'updateProduct':'addProduct',{product:p});
   msg('✓ ذخیره شد.'+(files.length?' عکس‌های جدید بعد از ۱ تا ۲ دقیقه در سایت دیده می‌شن.':''),'ok');
